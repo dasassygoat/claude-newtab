@@ -1,0 +1,4 @@
+# Local signing key that pins the unpacked extension ID; never publish it.
+.extension-key.pem
+dist/
+*.zip

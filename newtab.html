@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New Tab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+<main class="page">
+  <header class="top">
+    <div>
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="greeting" id="greeting"></div>
+  </header>
+
+  <section class="claude">
+    <form id="askForm" class="ask">
+      <div class="askbox">
+        <span class="spark" aria-hidden="true">✦</span>
+        <textarea id="prompt" rows="1" placeholder="Ask Claude anything…  (Enter to send, Shift+Enter for a new line, / to focus)" autofocus></textarea>
+        <button type="submit" class="send" title="Open in Claude (Enter)">Ask</button>
+      </div>
+    </form>
+    <div class="chips" id="chips"></div>
+    <nav class="claudelinks" id="claudeLinks"></nav>
+  </section>
+
+  <section class="grid">
+    <div class="card agenda">
+      <div class="cardhead">
+        <h2>Agenda</h2>
+        <div class="cardtools">
+          <span class="muted small" id="updated"></span>
+          <button class="iconbtn" id="refresh" title="Refresh">↻</button>
+        </div>
+      </div>
+      <div id="agenda" class="agendabody"></div>
+      <div id="agendaErrors" class="errors"></div>
+    </div>
+
+    <div class="card links">
+      <div class="cardhead"><h2>Quick links</h2><a class="small muted" id="editLinks" href="options.html">edit</a></div>
+      <div id="links" class="linklist"></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <a href="options.html">Settings</a>
+  </footer>
+</main>
+<script src="newtab.js"></script>
+</body>
+</html>

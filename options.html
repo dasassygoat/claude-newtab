@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Claude New Tab – Settings</title>
+<link rel="stylesheet" href="newtab.css">
+<style>
+  .page { max-width: 760px; gap: 22px; }
+  h1 { font-size: 22px; margin: 0; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], input[type=url], input[type=number], textarea, select {
+    width: 100%; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  input:focus, textarea:focus, select:focus { outline: 0; border-color: var(--accent); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .row3 { display: grid; grid-template-columns: 1.4fr 2fr 70px 60px; gap: 8px; align-items: end; }
+  .btn { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 9px; padding: 8px 14px; font-weight: 600; }
+  .btn.secondary { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  .btn.small { padding: 6px 10px; font-size: 13px; }
+  .status { font-size: 13px; color: var(--muted); margin-top: 8px; min-height: 1.2em; }
+  .status.err { color: #b3452e; }
+  .status.ok { color: #2f8a4a; }
+  code { background: var(--soft); padding: 2px 6px; border-radius: 6px; font-size: 12.5px; user-select: all; }
+  ol { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: 13.5px; }
+  .feed { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+  .actions { display: flex; gap: 10px; align-items: center; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="top"><h1>Claude New Tab settings</h1><a href="newtab.html" class="small muted">← back to new tab</a></header>
+
+  <div class="card">
+    <div class="cardhead"><h2>General</h2></div>
+    <div class="row">
+      <div><label for="name">Your first name (for the greeting)</label><input type="text" id="name" placeholder="Bryan"></div>
+      <div><label for="daysAhead">Days to show in the agenda</label><input type="number" id="daysAhead" min="1" max="14"></div>
+    </div>
+    <label for="claudeBase">Claude URL</label><input type="url" id="claudeBase" placeholder="https://claude.ai">
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h2>Microsoft 365 calendar (live, via Microsoft Graph)</h2></div>
+    <div id="graphSignedIn" hidden class="actions">
+      <span>Signed in as <strong id="graphName"></strong> <span class="muted" id="graphEmail"></span></span>
+      <button class="btn secondary small" id="graphSignOut">Sign out</button>
+    </div>
+    <div class="row">
+      <div><label for="clientId">Application (client) ID</label><input type="text" id="clientId" placeholder="00000000-0000-0000-0000-000000000000"></div>
+      <div><label for="tenant">Tenant</label><input type="text" id="tenant" placeholder="organizations, common, or your tenant ID"></div>
+    </div>
+    <label><input type="checkbox" id="includeAllCalendars"> Include all my calendars (not just the default one)</label>
+    <div class="actions" style="margin-top:10px">
+      <button class="btn" id="graphSignIn">Sign in with Microsoft</button>
+      <span class="status" id="graphStatus"></span>
+    </div>
+    <details style="margin-top:12px">
+      <summary>How to get a client ID (one-time, ~3 minutes in Entra admin center)</summary>
+      <ol>
+        <li>Go to <a href="https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade" target="_blank">Entra → App registrations</a> → <b>New registration</b>.</li>
+        <li>Name: <i>Claude New Tab</i>. Supported account types: <i>Accounts in this organizational directory only</i> (or multi-tenant if you have several).</li>
+        <li>Redirect URI: platform <b>Single-page application (SPA)</b>, URI <code id="redirectUri"></code></li>
+        <li>Register. Copy the <b>Application (client) ID</b> into the box above.</li>
+        <li>API permissions → Add → Microsoft Graph → Delegated → <b>Calendars.Read</b> (and <b>User.Read</b>). Grant admin consent if prompted.</li>
+        <li>Click <b>Sign in with Microsoft</b> above.</li>
+      </ol>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h2>iCal (.ics) feeds</h2><button class="btn secondary small" id="addFeed">+ Add feed</button></div>
+    <div class="muted small">Works with any published/secret iCal URL: Outlook (Settings → Calendar → Shared calendars → Publish a calendar → ICS), Google Calendar (Settings → your calendar → Secret address in iCal format), iCloud, etc. Outlook's published feeds can lag by a few hours; use Microsoft sign-in above for live data.</div>
+    <div id="feeds"></div>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h2>Quick prompts</h2></div>
+    <div class="muted small">One per line as <code>Label | Prompt text</code>. A prompt ending in <code>:</code> or <code>?</code> is treated as a prefix and placed in the box for you to finish. Use <code>__PLAN_DAY__</code> for the built-in "plan my day" prompt that includes today's calendar.</div>
+    <textarea id="prompts" rows="6"></textarea>
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h2>Quick links</h2></div>
+    <div class="muted small">One per line as <code>Label | https://url</code>.</div>
+    <textarea id="links" rows="6"></textarea>
+  </div>
+
+  <div class="actions">
+    <button class="btn" id="save">Save</button>
+    <span class="status" id="saveStatus"></span>
+  </div>
+</main>
+<script src="options.js"></script>
+</body>
+</html>
