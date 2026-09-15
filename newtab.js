@@ -80,7 +80,8 @@ function renderAgenda() {
     box.innerHTML = `<div class="setup">No calendars yet. <a href="options.html">Open settings</a> to sign in with Microsoft 365 or add an iCal (.ics) feed from Outlook or Google Calendar.</div>`;
     return;
   }
-  if (settings.graph && settings.graph.clientId && graphAuth === null) {
+  const needsSignIn = graphAuth === null || ((cache && cache.errors) || []).some((e) => /sign in again|Not signed in/i.test(e));
+  if (settings.graph && settings.graph.clientId && needsSignIn) {
     const div = document.createElement('div');
     div.className = 'setup';
     div.innerHTML = `Microsoft 365 is configured but not signed in yet. <button type="button" class="chip" id="graphSignInBtn">Sign in with Microsoft</button> <span class="small" id="graphSignInStatus"></span>`;

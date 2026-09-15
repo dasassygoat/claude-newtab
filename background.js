@@ -141,26 +141,40 @@ function summarizeAuth(auth) {
   return { name: auth.name, email: auth.email, expiresAt: auth.expiresAt };
 }
 
-async function graphSignIn() {
-  const settings = await getSettings();
+async function authorize(settings, { interactive, prompt, loginHint }) {
   const { clientId, tenant } = settings.graph;
-  if (!clientId) return { ok: false, error: 'Enter an Application (client) ID first.' };
   const redirect = chrome.identity.getRedirectURL();
   const { verifier, challenge } = await pkcePair();
   const state = b64url(crypto.getRandomValues(new Uint8Array(16)));
-  const authUrl = `https://login.microsoftonline.com/${encodeURIComponent(tenant || 'organizations')}/oauth2/v2.0/authorize?` + new URLSearchParams({
+  const params = {
     client_id: clientId, response_type: 'code', redirect_uri: redirect, response_mode: 'query',
-    scope: SCOPES, code_challenge: challenge, code_challenge_method: 'S256', state, prompt: 'select_account',
-  });
-  const resultUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true });
+    scope: SCOPES, code_challenge: challenge, code_challenge_method: 'S256', state, prompt,
+  };
+  if (loginHint) params.login_hint = loginHint;
+  const authUrl = `https://login.microsoftonline.com/${encodeURIComponent(tenant || 'organizations')}/oauth2/v2.0/authorize?` + new URLSearchParams(params);
+  const resultUrl = await chrome.identity.launchWebAuthFlow({ url: authUrl, interactive });
+  if (!resultUrl) throw new Error('No response from sign-in');
   const u = new URL(resultUrl);
   if (u.searchParams.get('error')) throw new Error(`${u.searchParams.get('error')}: ${u.searchParams.get('error_description')}`);
   if (u.searchParams.get('state') !== state) throw new Error('State mismatch');
   const code = u.searchParams.get('code');
   const auth = await tokenRequest(settings, { grant_type: 'authorization_code', code, redirect_uri: redirect, code_verifier: verifier });
+  auth.rtIssuedAt = Date.now();          // SPA refresh tokens live exactly 24h from this moment
   await chrome.storage.local.set({ graphAuth: auth });
+  return auth;
+}
+
+async function graphSignIn() {
+  const settings = await getSettings();
+  if (!settings.graph.clientId) return { ok: false, error: 'Enter an Application (client) ID first.' };
+  const auth = await authorize(settings, { interactive: true, prompt: 'select_account' });
   refresh().catch(() => {});
   return { ok: true, auth: summarizeAuth(auth) };
+}
+
+// Re-authenticate without UI using the browser's existing Microsoft session (prompt=none).
+async function silentSignIn(settings, prev) {
+  return authorize(settings, { interactive: false, prompt: 'none', loginHint: prev && prev.email });
 }
 
 async function tokenRequest(settings, params) {
@@ -181,18 +195,29 @@ async function tokenRequest(settings, params) {
   };
 }
 
+const RT_RENEW_AFTER = 20 * 3600 * 1000;   // renew silently once the SPA refresh token is 20h old
+
 async function graphToken(settings) {
   let auth = (await chrome.storage.local.get('graphAuth')).graphAuth;
   if (!auth) throw new Error('Not signed in (open settings to sign in)');
-  if (Date.now() < auth.expiresAt) return auth.accessToken;
-  if (!auth.refreshToken) throw new Error('Session expired, sign in again');
-  try {
-    auth = await tokenRequest(settings, { grant_type: 'refresh_token', refresh_token: auth.refreshToken });
-  } catch (e) {
-    throw new Error(`Session expired, sign in again (${e.message})`);
+  const rtAge = auth.rtIssuedAt ? Date.now() - auth.rtIssuedAt : Infinity;
+  if (rtAge > RT_RENEW_AFTER) {
+    try { return (await silentSignIn(settings, auth)).accessToken; } catch (e) { /* fall through to normal path */ }
   }
-  await chrome.storage.local.set({ graphAuth: auth });
-  return auth.accessToken;
+  if (Date.now() < auth.expiresAt) return auth.accessToken;
+  try {
+    if (!auth.refreshToken) throw new Error('no refresh token');
+    auth = await tokenRequest(settings, { grant_type: 'refresh_token', refresh_token: auth.refreshToken });
+    auth.rtIssuedAt = (await chrome.storage.local.get('graphAuth')).graphAuth.rtIssuedAt;
+    await chrome.storage.local.set({ graphAuth: auth });
+    return auth.accessToken;
+  } catch (e) {
+    try {
+      return (await silentSignIn(settings, auth)).accessToken;
+    } catch (e2) {
+      throw new Error(`Session expired, sign in again (${e2.message})`);
+    }
+  }
 }
 
 async function graphGet(token, url) {

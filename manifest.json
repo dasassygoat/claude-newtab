@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Claude New Tab",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "New tab page: quick Claude chats, today's calendar, quick links.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr03pl3XvUYlK7RvZGxicBos/SvTJZRX57WxQfs0fZl/EpkjbzqS+XK6fqGPe4ggKtZdDj9lrezn7GoaDTVz/uBxeKjDOQKz8y486QZozcEWr6RcHJ/5rG5OBsjTWFJnY5O7Y6G7cpDNEMGhHrHxFfo+N0HZHTJ6wiCCxn5CNND1aByu/aRA+IYALIkM31WEbKZ6xM8Z9zbZISq55OtTp61uHAAG3VTeUUEqKO3E1S/CouhzusP2JaBEACfoF5kRt9z/Ql4XtP+LjBurlU6pfOb0q5bA8hTWe7ReqCxZcUlFF7GOfozGHSCeLUYOfD+fxAnDn0b926SvIgqXeByWLSQIDAQAB",
   "icons": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
