@@ -170,6 +170,11 @@ const GRADIENTS = {
   peach: 'linear-gradient(135deg, #fbe9dc 0%, #f6c9b4 50%, #e9a58a 100%)',
   mist: 'linear-gradient(160deg, #eef1f5 0%, #d8dee8 100%)',
 };
+// Alternate daily: NASA on even days, Commons on odd days (local calendar day).
+function rotateSource() {
+  const day = Math.round(new Date().setHours(0, 0, 0, 0) / 86400000);
+  return day % 2 === 0 ? 'apod' : 'commons';
+}
 function luminance(hex) {
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
   if (!m) return 0;
@@ -193,8 +198,9 @@ async function applyBackground() {
   } else if (bg.type === 'gradient') {
     body.style.backgroundImage = GRADIENTS[bg.gradient] || GRADIENTS.dusk;
     if (tone === 'auto') tone = LIGHT_GRADIENTS.includes(bg.gradient) ? 'light' : 'dark';
-  } else if (bg.type === 'apod' || bg.type === 'commons') {
-    const r = await send('getDaily', { source: bg.type });
+  } else if (bg.type === 'apod' || bg.type === 'commons' || bg.type === 'rotate') {
+    const source = bg.type === 'rotate' ? rotateSource() : bg.type;
+    const r = await send('getDaily', { source });
     const d = r.ok ? r.daily : null;
     if (!d || !d.imageUrl) { showDailyInfo(null, r.error || (d && d.error)); return; }
     body.style.backgroundImage = `url("${d.imageUrl.replace(/"/g, '%22')}")`;

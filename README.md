@@ -36,7 +36,7 @@ uploaded from the machine — resized and stored in local extension storage, so 
 Images get an adjustable darkening overlay and optional frosted cards; text tone is picked automatically or set manually.
 Two "picture of the day" modes fetch a fresh image daily and cache it for 6 hours: **NASA APOD** (api.nasa.gov; the shared
 DEMO_KEY is rate-limited, a free key can be entered in settings; HD by default) and **Wikimedia Commons POTD** (Commons API,
-2560px thumbnail). Both show an ⓘ icon bottom-right: hover for the explanation/caption and credit, click to open the source page.
+2560px thumbnail). An "Alternate daily" mode switches between them (NASA on even days, Commons on odd). All show an ⓘ icon bottom-right: hover for the explanation/caption and credit, click to open the source page.
 
 ## Files
 manifest.json · sw.js (service worker: fetch/cache/OAuth) · ics.js (parser) ·

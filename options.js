@@ -57,7 +57,8 @@ const GRADIENTS = {
   mist: 'linear-gradient(160deg, #eef1f5 0%, #d8dee8 100%)',
 };
 const BG_DEFAULT = { type: 'default', color: '#1f1c2c', gradient: 'dusk', imageUrl: '', dim: 0.35, frost: true, tone: 'auto', nasaKey: '', apodHd: true };
-const DAILY_TYPES = ['apod', 'commons'];
+const DAILY_TYPES = ['apod', 'commons', 'rotate'];
+function rotateSource() { const day = Math.round(new Date().setHours(0, 0, 0, 0) / 86400000); return day % 2 === 0 ? 'apod' : 'commons'; }
 let hasUploadedImage = false;
 
 function bgType() { const r = document.querySelector('input[name=bgType]:checked'); return r ? r.value : 'default'; }
@@ -73,7 +74,7 @@ async function updateBgUI() {
   $('bgColorRow').hidden = type !== 'color';
   $('bgGradientRow').hidden = type !== 'gradient';
   $('bgImageRow').hidden = type !== 'image';
-  $('bgApodRow').hidden = type !== 'apod';
+  $('bgApodRow').hidden = type !== 'apod' && type !== 'rotate';
   $('bgCommonsRow').hidden = type !== 'commons';
   $('bgDailyRow').hidden = !DAILY_TYPES.includes(type);
   $('bgExtras').hidden = type === 'default';
@@ -85,7 +86,7 @@ async function updateBgUI() {
   else if (bg.type === 'gradient') pv.style.backgroundImage = GRADIENTS[bg.gradient];
   else if (DAILY_TYPES.includes(bg.type)) {
     pv.style.setProperty('--pdim', String(bg.dim));
-    const r = await send('getDaily', { source: bg.type });
+    const r = await send('getDaily', { source: bg.type === 'rotate' ? rotateSource() : bg.type });
     if (r.ok && r.daily && r.daily.imageUrl) { pv.style.backgroundImage = `url("${r.daily.imageUrl.replace(/"/g, '%22')}")`; pv.querySelector('span').textContent = r.daily.title; }
     else pv.querySelector('span').textContent = `Could not load: ${r.error || (r.daily && r.daily.error) || 'unknown error'}`;
     return;
