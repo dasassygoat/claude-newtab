@@ -37,6 +37,9 @@ Two "picture of the day" modes fetch a fresh image daily and cache it for 6 hour
 DEMO_KEY is rate-limited, a free key can be entered in settings; HD by default) and **Wikimedia Commons POTD** (Commons API,
 2560px thumbnail). An "Alternate daily" mode switches between them (NASA on even days, Commons on odd). All show an ⓘ icon bottom-right: hover for the explanation/caption and credit, click to open the source page.
 
+## Developer guide
+See [HOW_IT_WORKS.md](HOW_IT_WORKS.md) for architecture, data model, the calendar/OAuth pipelines, and dev workflow.
+
 ## Files
 manifest.json · sw.js (service worker: fetch/cache/OAuth) · ics.js (parser) ·
 newtab.html/css/js (page) · options.html/js (settings)
