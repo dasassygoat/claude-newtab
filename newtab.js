@@ -35,10 +35,11 @@ function openClaude(q, newTab) {
 function autosize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 220) + 'px'; }
 
 function planDayPrompt() {
-  const today = (cache && cache.events || []).filter((e) => sameDay(e.start, Date.now()) || (e.allDay && e.start <= Date.now() && e.end > Date.now()));
+  const now = Date.now();
+  const today = (cache && cache.events || []).filter((e) => (sameDay(e.start, now) || (e.allDay && e.start <= now && e.end > now)) && (e.allDay || e.end > now));
   const lines = today.map((e) => e.allDay ? `- All day: ${e.title}` : `- ${fmtTime(e.start)}–${fmtTime(e.end)}: ${e.title}${e.location ? ` (${e.location})` : ''}`);
   const dateStr = new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
-  return `Help me plan my day. Today is ${dateStr}, and it's ${fmtTime(Date.now())} now.\n\nMy calendar:\n${lines.length ? lines.join('\n') : '- (nothing scheduled)'}\n\nAsk me what else I need to get done, then suggest a realistic schedule with focus blocks around my meetings.`;
+  return `Help me plan my day. Today is ${dateStr}, and it's ${fmtTime(Date.now())} now.\n\nWhat's still on my calendar today:\n${lines.length ? lines.join('\n') : '- (nothing left scheduled)'}\n\nAsk me what else I need to get done, then suggest a realistic schedule with focus blocks around my meetings.`;
 }
 
 function renderChips() {
@@ -102,7 +103,8 @@ function renderAgenda() {
   for (let i = 0; i < days; i++) {
     const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + i);
     const dayStart = d.getTime(), dayEnd = dayStart + 86400000;
-    const list = events.filter((e) => e.start < dayEnd && e.end > dayStart)
+    const all = events.filter((e) => e.start < dayEnd && e.end > dayStart);
+    const list = all.filter((e) => settings.showPast || e.allDay || e.end > now)
       .sort((a, b) => (a.allDay !== b.allDay ? (a.allDay ? -1 : 1) : a.start - b.start));
     if (!list.length && i > 0) continue;       // only always show today
     any = any || list.length > 0;
@@ -110,7 +112,7 @@ function renderAgenda() {
     sec.className = 'day' + (i === 0 ? ' today' : '');
     sec.innerHTML = `<h3>${dayLabel(d, i)} <span class="sub">${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}</span></h3>`;
     if (!list.length) {
-      sec.insertAdjacentHTML('beforeend', `<div class="empty">Nothing scheduled — a clear day.</div>`);
+      sec.insertAdjacentHTML('beforeend', `<div class="empty">${all.length ? 'No more events today.' : 'Nothing scheduled — a clear day.'}</div>`);
     }
     for (const e of list) {
       const el = document.createElement('a');

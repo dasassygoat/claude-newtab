@@ -132,6 +132,7 @@ async function load() {
   $('name').value = settings.name || '';
   $('daysAhead').value = settings.daysAhead || 3;
   $('claudeBase').value = settings.claudeBase || 'https://claude.ai';
+  $('showPast').checked = !!settings.showPast;
   $('clientId').value = settings.graph.clientId || '';
   $('tenant').value = settings.graph.tenant || 'organizations';
   $('includeAllCalendars').checked = settings.graph.includeAllCalendars !== false;
@@ -149,6 +150,7 @@ function collect() {
     name: $('name').value.trim(),
     daysAhead: Math.min(14, Math.max(1, parseInt($('daysAhead').value, 10) || 3)),
     claudeBase: $('claudeBase').value.trim() || 'https://claude.ai',
+    showPast: $('showPast').checked,
     graph: { clientId: $('clientId').value.trim(), tenant: $('tenant').value.trim() || 'organizations', includeAllCalendars: $('includeAllCalendars').checked },
     prompts: parseLines($('prompts').value, false),
     links: parseLines($('links').value, true),
