@@ -22,7 +22,7 @@ const DEFAULT_SETTINGS = {
     { label: 'HubSpot', url: 'https://app.hubspot.com/' },
   ],
   feeds: [],                      // [{name, url, color}]
-  graph: { clientId: 'a90740f9-bfe0-4b8f-920b-9312a909e0a6', tenant: 'fb20f7ca-1014-49ad-ac5e-3c15f5f60194', includeAllCalendars: true },
+  graph: { clientId: '', tenant: 'organizations', includeAllCalendars: true },   // set your own in Settings
 };
 
 chrome.runtime.onInstalled.addListener(() => { scheduleAlarm(); refresh().catch(() => {}); });

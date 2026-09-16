@@ -4,7 +4,7 @@
 **Short description (≤132):** New tab page with a Claude prompt box, your Microsoft 365 agenda for the next few days, and quick links.
 **Category:** Productivity
 **Visibility:** Hidden
-**Privacy policy URL:** (public gist or repo link to PRIVACY.md)
+**Privacy policy URL:** https://github.com/dasassygoat/claude-newtab/blob/main/PRIVACY.md
 
 **Description:**
 Replaces the new tab page with a focused start page:

@@ -15,11 +15,10 @@ Extension ID is pinned by the `key` in manifest.json (private key: `.extension-k
 `gfdflaodlclbohbbambnoacdnieifmao`
 
 ## Calendar sources (Settings page: click the extension icon, or the "Settings" link at the bottom)
-- **Microsoft 365 (live)** – Entra app registration "Claude New Tab" in the Lan Services Fbg LLC tenant
-  (client ID a90740f9-bfe0-4b8f-920b-9312a909e0a6, tenant fb20f7ca-1014-49ad-ac5e-3c15f5f60194, created 2026-09-11),
-  SPA redirect URI `https://gfdflaodlclbohbbambnoacdnieifmao.chromiumapp.org/`, delegated `Calendars.Read` + `User.Read`,
-  admin consent granted. These IDs are the defaults in background.js, so just click *Sign in with Microsoft*
-  (on the new tab's agenda card or in settings).
+- **Microsoft 365 (live)** – needs a (free) Entra app registration in your tenant: name it anything, platform
+  **Single-page application**, redirect URI `https://<extension-id>.chromiumapp.org/` (the settings page shows the exact
+  value), delegated permissions `Calendars.Read` + `User.Read`, then grant admin consent. Paste the Application (client)
+  ID and Directory (tenant) ID into Settings and click *Sign in with Microsoft*. The sign-in renews itself silently.
 - **iCal feeds** – any `.ics` URL (Outlook "Publish a calendar", Google "Secret address in iCal format", iCloud).
   Recurring events (RRULE/EXDATE/RECURRENCE-ID) and Outlook's Windows time zone names are handled in `ics.js`.
 
