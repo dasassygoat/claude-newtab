@@ -25,6 +25,14 @@
   .feed { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
   .actions { display: flex; gap: 10px; align-items: center; }
   details summary { cursor: pointer; color: var(--muted); font-size: 13.5px; }
+  .bgtypes { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+  .radio { display: inline-flex; align-items: center; gap: 6px; color: var(--fg); margin: 4px 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch { width: 64px; height: 40px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; font-size: 10px; color: rgba(255,255,255,.85); text-shadow: 0 1px 3px rgba(0,0,0,.6); }
+  .swatch.selected { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .bgpreview { margin-top: 12px; height: 110px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; position: relative; overflow: hidden; }
+  .bgpreview::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,var(--pdim, 0)); }
+  .bgpreview span { position: relative; background: color-mix(in srgb, var(--bg2) 80%, transparent); padding: 6px 12px; border-radius: 8px; color: var(--fg); }
 </style>
 </head>
 <body>
@@ -38,6 +46,39 @@
       <div><label for="daysAhead">Days to show in the agenda</label><input type="number" id="daysAhead" min="1" max="14"></div>
     </div>
     <label for="claudeBase">Claude URL</label><input type="url" id="claudeBase" placeholder="https://claude.ai">
+  </div>
+
+  <div class="card">
+    <div class="cardhead"><h2>Background</h2></div>
+    <div class="bgtypes">
+      <label class="radio"><input type="radio" name="bgType" value="default"> Default (follows system light/dark)</label>
+      <label class="radio"><input type="radio" name="bgType" value="color"> Solid color</label>
+      <label class="radio"><input type="radio" name="bgType" value="gradient"> Gradient</label>
+      <label class="radio"><input type="radio" name="bgType" value="image"> Image</label>
+    </div>
+    <div id="bgColorRow" hidden>
+      <label for="bgColor">Color</label>
+      <input type="color" id="bgColor" style="width:120px;height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg)">
+    </div>
+    <div id="bgGradientRow" hidden>
+      <label>Preset</label>
+      <div class="swatches" id="bgSwatches"></div>
+    </div>
+    <div id="bgImageRow" hidden>
+      <label for="bgImageUrl">Image URL (leave empty to use an uploaded file)</label>
+      <input type="url" id="bgImageUrl" placeholder="https://example.com/wallpaper.jpg">
+      <label for="bgFile">Or upload a picture (kept on this device only, resized to 2560px)</label>
+      <div class="actions"><input type="file" id="bgFile" accept="image/*"><button type="button" class="btn secondary small" id="bgFileClear">Remove uploaded</button><span class="status" id="bgFileStatus"></span></div>
+      <div class="row">
+        <div><label for="bgDim">Darken image: <span id="bgDimVal"></span></label><input type="range" id="bgDim" min="0" max="0.8" step="0.05"></div>
+      </div>
+    </div>
+    <div id="bgExtras" hidden class="row">
+      <label><input type="checkbox" id="bgFrost"> Frosted (translucent, blurred) cards</label>
+      <div><label for="bgTone">Text &amp; card tone</label>
+        <select id="bgTone"><option value="auto">Auto</option><option value="dark">Dark background, light text</option><option value="light">Light background, dark text</option></select></div>
+    </div>
+    <div class="bgpreview" id="bgPreview"><span>Preview</span></div>
   </div>
 
   <div class="card">

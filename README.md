@@ -29,6 +29,11 @@ Events refresh every 10 minutes in the background and are cached so the tab pain
 - "Plan my day" builds a prompt from today's events. Prompts ending in `:` or `?` act as prefixes.
 - Prompts and links are editable in settings (`Label | text` per line).
 
+## Background
+Settings → Background: default (system light/dark), solid color, gradient preset, or an image (URL, or a picture
+uploaded from the machine — resized and stored in local extension storage, so it does not sync between devices).
+Images get an adjustable darkening overlay and optional frosted cards; text tone is picked automatically or set manually.
+
 ## Files
 manifest.json · background.js (service worker: fetch/cache/OAuth) · ics.js (parser) ·
 newtab.html/css/js (page) · options.html/js (settings)

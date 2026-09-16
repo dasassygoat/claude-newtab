@@ -45,6 +45,80 @@ async function requestFeedPermissions(feeds) {
   return chrome.permissions.request({ origins });
 }
 
+// ---------- Background ----------
+const GRADIENTS = {
+  dusk: 'linear-gradient(135deg, #1f1c2c 0%, #928dab 100%)',
+  ocean: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+  sunset: 'linear-gradient(135deg, #2b1d16 0%, #7a3b2e 45%, #d97757 100%)',
+  forest: 'linear-gradient(135deg, #0b2a1e 0%, #1f4d3a 60%, #3c7a5a 100%)',
+  slate: 'linear-gradient(160deg, #1b1f24 0%, #2d3440 100%)',
+  aurora: 'linear-gradient(135deg, #0b1026 0%, #123a5c 40%, #1c8b7a 80%, #6fd3a6 100%)',
+  peach: 'linear-gradient(135deg, #fbe9dc 0%, #f6c9b4 50%, #e9a58a 100%)',
+  mist: 'linear-gradient(160deg, #eef1f5 0%, #d8dee8 100%)',
+};
+const BG_DEFAULT = { type: 'default', color: '#1f1c2c', gradient: 'dusk', imageUrl: '', dim: 0.35, frost: true, tone: 'auto' };
+let hasUploadedImage = false;
+
+function bgType() { const r = document.querySelector('input[name=bgType]:checked'); return r ? r.value : 'default'; }
+function collectBg() {
+  return {
+    type: bgType(), color: $('bgColor').value, gradient: document.querySelector('.swatch.selected')?.dataset.name || 'dusk',
+    imageUrl: $('bgImageUrl').value.trim(), dim: parseFloat($('bgDim').value), frost: $('bgFrost').checked, tone: $('bgTone').value,
+  };
+}
+async function updateBgUI() {
+  const type = bgType();
+  $('bgColorRow').hidden = type !== 'color';
+  $('bgGradientRow').hidden = type !== 'gradient';
+  $('bgImageRow').hidden = type !== 'image';
+  $('bgExtras').hidden = type === 'default';
+  $('bgDimVal').textContent = Math.round(parseFloat($('bgDim').value) * 100) + '%';
+  const pv = $('bgPreview'); const bg = collectBg();
+  pv.style.backgroundImage = ''; pv.style.backgroundColor = ''; pv.style.setProperty('--pdim', '0');
+  if (bg.type === 'color') pv.style.backgroundColor = bg.color;
+  else if (bg.type === 'gradient') pv.style.backgroundImage = GRADIENTS[bg.gradient];
+  else if (bg.type === 'image') {
+    let src = bg.imageUrl;
+    if (!src) { try { src = (await chrome.storage.local.get('bgImage')).bgImage || ''; } catch (e) { src = ''; } }
+    if (src) { pv.style.backgroundImage = `url("${src.replace(/"/g, '%22')}")`; pv.style.setProperty('--pdim', String(bg.dim)); }
+  }
+}
+function initBg(bg) {
+  bg = Object.assign({}, BG_DEFAULT, bg || {});
+  const radio = document.querySelector(`input[name=bgType][value="${bg.type}"]`) || document.querySelector('input[name=bgType][value=default]');
+  radio.checked = true;
+  $('bgColor').value = bg.color; $('bgImageUrl').value = bg.imageUrl; $('bgDim').value = bg.dim; $('bgFrost').checked = bg.frost !== false; $('bgTone').value = bg.tone;
+  const sw = $('bgSwatches'); sw.innerHTML = '';
+  for (const [name, css] of Object.entries(GRADIENTS)) {
+    const d = document.createElement('div'); d.className = 'swatch' + (name === bg.gradient ? ' selected' : ''); d.dataset.name = name; d.style.backgroundImage = css; d.textContent = name; d.title = name;
+    d.addEventListener('click', () => { sw.querySelectorAll('.swatch').forEach((x) => x.classList.remove('selected')); d.classList.add('selected'); updateBgUI(); });
+    sw.appendChild(d);
+  }
+  chrome.storage.local.get('bgImage').then((r) => { hasUploadedImage = !!r.bgImage; $('bgFileStatus').textContent = hasUploadedImage ? 'An uploaded picture is stored.' : ''; });
+  updateBgUI();
+}
+document.querySelectorAll('input[name=bgType]').forEach((r) => r.addEventListener('change', updateBgUI));
+['bgColor', 'bgImageUrl', 'bgDim', 'bgFrost', 'bgTone'].forEach((id) => $(id).addEventListener('input', updateBgUI));
+
+$('bgFile').addEventListener('change', async () => {
+  const file = $('bgFile').files[0]; if (!file) return;
+  setStatus($('bgFileStatus'), 'Processing…');
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 2560 / bmp.width, 1600 / bmp.height);
+    const c = document.createElement('canvas'); c.width = Math.round(bmp.width * scale); c.height = Math.round(bmp.height * scale);
+    c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    let dataUrl = c.toDataURL('image/jpeg', 0.86);
+    if (dataUrl.length > 6 * 1024 * 1024) dataUrl = c.toDataURL('image/jpeg', 0.7);
+    await chrome.storage.local.set({ bgImage: dataUrl });
+    hasUploadedImage = true;
+    $('bgImageUrl').value = '';
+    setStatus($('bgFileStatus'), `Stored (${Math.round(dataUrl.length / 1024)} KB). Click Save.`, 'ok');
+  } catch (e) { setStatus($('bgFileStatus'), `Could not read image: ${e.message}`, 'err'); }
+  updateBgUI();
+});
+$('bgFileClear').addEventListener('click', async () => { await chrome.storage.local.remove('bgImage'); hasUploadedImage = false; $('bgFile').value = ''; setStatus($('bgFileStatus'), 'Removed.'); updateBgUI(); });
+
 async function refreshGraphStatus() {
   const r = await send('graphStatus');
   const a = r.auth;
@@ -65,6 +139,7 @@ async function load() {
   $('links').value = (settings.links || []).map((l) => `${l.label} | ${l.url}`).join('\n');
   $('feeds').innerHTML = '';
   for (const f of settings.feeds || []) $('feeds').appendChild(feedRow(f));
+  initBg(settings.bg);
   $('redirectUri').textContent = chrome.identity.getRedirectURL();
   await refreshGraphStatus();
 }
@@ -78,6 +153,7 @@ function collect() {
     prompts: parseLines($('prompts').value, false),
     links: parseLines($('links').value, true),
     feeds: readFeeds(),
+    bg: collectBg(),
   };
 }
 

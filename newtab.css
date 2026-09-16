@@ -2,7 +2,7 @@
   color-scheme: light dark;
   --bg: #f4f1ec; --bg2: #ffffff; --fg: #1f1d1a; --muted: #6f6a63; --line: #e4dfd7;
   --accent: #d97757; --accent-fg: #ffffff; --soft: #f9ede6; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(30,20,10,.06);
-  --now: #d97757; --past: .5;
+  --now: #d97757; --past: .5; --dim: 0; --card-alpha: 100%;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -10,17 +10,26 @@
     --accent: #e08a6a; --accent-fg: #1a120e; --soft: #2a221d; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
   }
 }
+/* Explicit tone chosen for a custom background (overrides the system scheme). */
+body[data-tone="light"] {
+  --bg: #f4f1ec; --bg2: #ffffff; --fg: #1f1d1a; --muted: #6f6a63; --line: #e4dfd7;
+  --accent: #d97757; --accent-fg: #ffffff; --soft: #f9ede6; --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(30,20,10,.06);
+}
+body[data-tone="dark"] {
+  --bg: #14130f; --bg2: #1f1d19; --fg: #ece7df; --muted: #9a9389; --line: #2e2b26;
+  --accent: #e08a6a; --accent-fg: #1a120e; --soft: #2a221d; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+}
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
-  background: var(--bg); color: var(--fg);
+  background: var(--bg); color: var(--fg); position: relative;
   font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 a { color: inherit; text-decoration: none; }
 a:hover { text-decoration: underline; }
 button { font: inherit; color: inherit; cursor: pointer; }
-.page { max-width: 1080px; margin: 0 auto; padding: 48px 28px 40px; display: flex; flex-direction: column; gap: 32px; min-height: 100%; }
+.page { position: relative; z-index: 1; max-width: 1080px; margin: 0 auto; padding: 48px 28px 40px; display: flex; flex-direction: column; gap: 32px; min-height: 100%; }
 
 .top { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
 .clock { font-size: 64px; font-weight: 300; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -93,3 +102,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .linklist a:hover { background: var(--soft); border-color: var(--accent); text-decoration: none; }
 .linklist img { width: 16px; height: 16px; border-radius: 3px; flex: none; }
 .foot { margin-top: auto; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* ---- Custom backgrounds ---- */
+body.bg-custom { background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat; }
+body.bg-custom::before { content: ""; position: fixed; inset: 0; background: rgba(0, 0, 0, var(--dim)); z-index: 0; pointer-events: none; }
+body.bg-frost .card, body.bg-frost .askbox, body.bg-frost .chip, body.bg-frost .linklist a {
+  background: color-mix(in srgb, var(--bg2) var(--card-alpha), transparent);
+  backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+body.bg-frost .linklist a:hover, body.bg-frost .chip:hover, body.bg-frost .ev:hover { background: color-mix(in srgb, var(--soft) 85%, transparent); }
+body.bg-frost .clock, body.bg-frost .date, body.bg-frost .greeting, body.bg-frost .claudelinks, body.bg-frost .foot { text-shadow: 0 1px 12px rgba(0,0,0,.45); }
+body[data-tone="light"].bg-frost .clock, body[data-tone="light"].bg-frost .date, body[data-tone="light"].bg-frost .greeting, body[data-tone="light"].bg-frost .claudelinks, body[data-tone="light"].bg-frost .foot { text-shadow: 0 1px 12px rgba(255,255,255,.6); }

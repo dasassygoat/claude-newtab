@@ -157,10 +157,58 @@ function renderLinks() {
   if (!box.children.length) box.innerHTML = '<div class="empty">Add links in settings.</div>';
 }
 
+// ---------- Background ----------
+const GRADIENTS = {
+  dusk: 'linear-gradient(135deg, #1f1c2c 0%, #928dab 100%)',
+  ocean: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+  sunset: 'linear-gradient(135deg, #2b1d16 0%, #7a3b2e 45%, #d97757 100%)',
+  forest: 'linear-gradient(135deg, #0b2a1e 0%, #1f4d3a 60%, #3c7a5a 100%)',
+  slate: 'linear-gradient(160deg, #1b1f24 0%, #2d3440 100%)',
+  aurora: 'linear-gradient(135deg, #0b1026 0%, #123a5c 40%, #1c8b7a 80%, #6fd3a6 100%)',
+  peach: 'linear-gradient(135deg, #fbe9dc 0%, #f6c9b4 50%, #e9a58a 100%)',
+  mist: 'linear-gradient(160deg, #eef1f5 0%, #d8dee8 100%)',
+};
+function luminance(hex) {
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || '');
+  if (!m) return 0;
+  const [r, g, b] = [m[1], m[2], m[3]].map((h) => { const c = parseInt(h, 16) / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+const LIGHT_GRADIENTS = ['peach', 'mist'];
+async function applyBackground() {
+  const bg = Object.assign({ type: 'default', color: '#1f1c2c', gradient: 'dusk', imageUrl: '', dim: 0.35, frost: true, tone: 'auto' }, settings.bg || {});
+  const body = document.body;
+  body.classList.remove('bg-custom', 'bg-frost');
+  body.style.backgroundImage = ''; body.style.backgroundColor = '';
+  body.removeAttribute('data-tone');
+  body.style.setProperty('--dim', '0');
+  if (bg.type === 'default') return;
+  let tone = bg.tone;
+  if (bg.type === 'color') {
+    body.style.backgroundColor = bg.color;
+    if (tone === 'auto') tone = luminance(bg.color) > 0.4 ? 'light' : 'dark';
+  } else if (bg.type === 'gradient') {
+    body.style.backgroundImage = GRADIENTS[bg.gradient] || GRADIENTS.dusk;
+    if (tone === 'auto') tone = LIGHT_GRADIENTS.includes(bg.gradient) ? 'light' : 'dark';
+  } else if (bg.type === 'image') {
+    let src = bg.imageUrl;
+    if (!src) { try { src = (await chrome.storage.local.get('bgImage')).bgImage || ''; } catch (e) { src = ''; } }
+    if (!src) return;
+    body.style.backgroundImage = `url("${src.replace(/"/g, '%22')}")`;
+    body.style.backgroundColor = '#111';
+    body.style.setProperty('--dim', String(bg.dim));
+    if (tone === 'auto') tone = 'dark';
+  }
+  body.classList.add('bg-custom');
+  if (bg.frost) { body.classList.add('bg-frost'); body.style.setProperty('--card-alpha', bg.type === 'image' ? '72%' : '85%'); }
+  body.setAttribute('data-tone', tone);
+}
+
 // ---------- Boot ----------
 async function load() {
   const s = await send('getSettings');
   settings = s.settings || {};
+  applyBackground();
   renderChips(); renderLinks(); tickClock();
   if (settings.graph && settings.graph.clientId) { const g = await send('graphStatus'); graphAuth = g.auth || null; }
   const r = await send('getEvents');
@@ -194,6 +242,7 @@ $('refresh').addEventListener('click', async () => {
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.cache) { cache = changes.cache.newValue; renderAgenda(); }
   if (area === 'sync' && changes.settings) load();
+  if (area === 'local' && changes.bgImage) applyBackground();
 });
 
 load();
