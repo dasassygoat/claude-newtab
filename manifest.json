@@ -1,18 +1,42 @@
 {
   "manifest_version": 3,
   "name": "Claude New Tab",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "New tab page: quick Claude chats, today's calendar, quick links.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr03pl3XvUYlK7RvZGxicBos/SvTJZRX57WxQfs0fZl/EpkjbzqS+XK6fqGPe4ggKtZdDj9lrezn7GoaDTVz/uBxeKjDOQKz8y486QZozcEWr6RcHJ/5rG5OBsjTWFJnY5O7Y6G7cpDNEMGhHrHxFfo+N0HZHTJ6wiCCxn5CNND1aByu/aRA+IYALIkM31WEbKZ6xM8Z9zbZISq55OtTp61uHAAG3VTeUUEqKO3E1S/CouhzusP2JaBEACfoF5kRt9z/Ql4XtP+LjBurlU6pfOb0q5bA8hTWe7ReqCxZcUlFF7GOfozGHSCeLUYOfD+fxAnDn0b926SvIgqXeByWLSQIDAQAB",
-  "icons": { "16": "icon.png", "48": "icon.png", "128": "icon.png" },
-  "chrome_url_overrides": { "newtab": "newtab.html" },
-  "options_ui": { "page": "options.html", "open_in_tab": true },
-  "action": { "default_title": "Claude New Tab settings" },
-  "background": { "service_worker": "background.js" },
-  "permissions": ["storage", "alarms", "identity"],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "Claude New Tab settings"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "alarms",
+    "identity"
+  ],
   "host_permissions": [
     "https://graph.microsoft.com/*",
-    "https://login.microsoftonline.com/*"
+    "https://login.microsoftonline.com/*",
+    "https://api.nasa.gov/*",
+    "https://apod.nasa.gov/*",
+    "https://commons.wikimedia.org/*",
+    "https://upload.wikimedia.org/*"
   ],
-  "optional_host_permissions": ["https://*/*", "http://*/*"]
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ]
 }

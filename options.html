@@ -56,6 +56,21 @@
       <label class="radio"><input type="radio" name="bgType" value="color"> Solid color</label>
       <label class="radio"><input type="radio" name="bgType" value="gradient"> Gradient</label>
       <label class="radio"><input type="radio" name="bgType" value="image"> Image</label>
+      <label class="radio"><input type="radio" name="bgType" value="apod"> NASA Astronomy Picture of the Day</label>
+      <label class="radio"><input type="radio" name="bgType" value="commons"> Wikimedia Commons Picture of the Day</label>
+    </div>
+    <div id="bgApodRow" hidden>
+      <div class="muted small">A new image each day from <a href="https://apod.nasa.gov/apod/" target="_blank">apod.nasa.gov</a>. Hover the ⓘ icon on the new tab for the Explanation; click it to open the APOD page.</div>
+      <div class="row">
+        <div><label for="nasaKey">NASA API key (optional; the shared DEMO_KEY has a small daily limit — get a free key at <a href="https://api.nasa.gov/" target="_blank">api.nasa.gov</a>)</label><input type="text" id="nasaKey" placeholder="DEMO_KEY"></div>
+        <div><label>&nbsp;</label><label><input type="checkbox" id="apodHd"> Use the HD version (larger download)</label></div>
+      </div>
+    </div>
+    <div id="bgCommonsRow" hidden>
+      <div class="muted small">A new image each day from <a href="https://commons.wikimedia.org/wiki/Commons:Picture_of_the_day" target="_blank">Wikimedia Commons</a>. Hover the ⓘ icon on the new tab for the caption and credit; click it to open the image's source page.</div>
+    </div>
+    <div id="bgDailyRow" hidden>
+      <label for="bgDimDaily">Darken image: <span id="bgDimDailyVal"></span></label><input type="range" id="bgDimDaily" min="0" max="0.8" step="0.05" style="width:200px">
     </div>
     <div id="bgColorRow" hidden>
       <label for="bgColor">Color</label>

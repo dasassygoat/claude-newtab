@@ -51,6 +51,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
         case 'graphSignOut': await chrome.storage.local.remove(['graphAuth']); await refresh().catch(() => {}); return sendResponse({ ok: true });
         case 'graphStatus': return sendResponse({ ok: true, auth: summarizeAuth((await chrome.storage.local.get('graphAuth')).graphAuth) });
         case 'testFeed': return sendResponse(await testFeed(msg.url));
+        case 'getDaily': return sendResponse({ ok: true, daily: await getDaily(msg.source, await getSettings(), !!msg.force) });
         default: return sendResponse({ ok: false, error: 'unknown message' });
       }
     } catch (e) {
@@ -105,6 +106,9 @@ async function doRefresh() {
     jobs.push(fetchGraphEvents(settings, winStart, winEnd).then((evs) => events.push(...evs)).catch((e) => errors.push(`Microsoft 365: ${e.message}`)));
   }
 
+  if (settings.bg && (settings.bg.type === 'apod' || settings.bg.type === 'commons')) {
+    jobs.push(getDaily(settings.bg.type, settings, false).catch(() => {}));   // prefetch today's picture
+  }
   await Promise.all(jobs);
   events.sort((a, b) => (a.allDay !== b.allDay ? (a.allDay ? -1 : 1) : a.start - b.start));
   const cache = { events, errors, fetchedAt: Date.now(), winStart, winEnd };
@@ -271,4 +275,93 @@ async function fetchGraphEvents(settings, winStart, winEnd) {
 function localMidnightFromDateString(s) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : Date.parse(s);
+}
+
+// ---------- Picture of the day (NASA APOD, Wikimedia Commons) ----------
+const DAILY_TTL = 6 * 3600 * 1000;
+const pad2 = (n) => String(n).padStart(2, '0');
+const localDateStr = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+const utcDateStr = (d) => d.toISOString().slice(0, 10);
+const stripHtml = (h) => String(h || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/\s+/g, ' ').trim();
+const stripWiki = (w) => String(w || '')
+  .replace(/\[\[(?:[^\]|]*\|)?([^\]]*)\]\]/g, '$1').replace(/\{\{[^}]*\}\}/g, '').replace(/'{2,3}/g, '')
+  .replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+
+async function getDaily(source, settings, force) {
+  const key = `daily_${source}`;
+  const cached = (await chrome.storage.local.get(key))[key];
+  const today = localDateStr(new Date());
+  if (!force && cached && cached.fetchedFor === today && Date.now() - cached.fetchedAt < DAILY_TTL && cached.imageUrl) return cached;
+  try {
+    const data = source === 'apod' ? await fetchApod(settings) : await fetchCommonsPotd();
+    const rec = Object.assign(data, { source, fetchedFor: today, fetchedAt: Date.now() });
+    await chrome.storage.local.set({ [key]: rec });
+    return rec;
+  } catch (e) {
+    if (cached && cached.imageUrl) return Object.assign({}, cached, { error: e.message });
+    throw e;
+  }
+}
+
+async function fetchApod(settings) {
+  const apiKey = (settings.bg && settings.bg.nasaKey) || 'DEMO_KEY';
+  const hd = !(settings.bg && settings.bg.apodHd === false);   // HD by default
+  let lastErr = 'no image found';
+  for (let back = 0; back < 7; back++) {
+    const d = new Date(); d.setDate(d.getDate() - back);
+    const date = localDateStr(d);
+    const res = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(apiKey)}&date=${date}`, { cache: 'no-store' });
+    if (res.status === 429 || res.status === 403) throw new Error('NASA API rate limit reached (add your own free key in settings)');
+    if (res.status === 404 || res.status === 400) { lastErr = `no APOD for ${date}`; continue; }
+    if (!res.ok) throw new Error(`NASA API HTTP ${res.status}`);
+    const j = await res.json();
+    if (j.media_type !== 'image' || !j.url) { lastErr = `APOD for ${date} is a ${j.media_type}`; continue; }
+    const ymd = date.replace(/-/g, '').slice(2);
+    return {
+      date, imageUrl: hd && j.hdurl ? j.hdurl : j.url, title: j.title || 'Astronomy Picture of the Day',
+      text: j.explanation || '', credit: j.copyright ? `© ${String(j.copyright).trim()}` : 'NASA',
+      sourceUrl: `https://apod.nasa.gov/apod/ap${ymd}.html`, sourceName: 'NASA APOD',
+    };
+  }
+  throw new Error(lastErr);
+}
+
+async function commonsApi(params) {
+  const url = 'https://commons.wikimedia.org/w/api.php?' + new URLSearchParams(Object.assign({ format: 'json', formatversion: '2' }, params));
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Commons API HTTP ${res.status}`);
+  return res.json();
+}
+
+async function fetchCommonsPotd() {
+  let lastErr = 'no picture found';
+  for (let back = 0; back < 4; back++) {
+    const d = new Date(); d.setUTCDate(d.getUTCDate() - back);
+    const date = utcDateStr(d);
+    const q1 = await commonsApi({ action: 'query', prop: 'images', titles: `Template:Potd/${date}` });
+    const page = q1.query && q1.query.pages && q1.query.pages[0];
+    const file = page && page.images && page.images[0] && page.images[0].title;
+    if (!file) { lastErr = `no Commons POTD for ${date}`; continue; }
+    const q2 = await commonsApi({ action: 'query', titles: file, prop: 'imageinfo', iiprop: 'url|extmetadata|mime', iiurlwidth: '2560' });
+    const ii = q2.query && q2.query.pages && q2.query.pages[0] && q2.query.pages[0].imageinfo && q2.query.pages[0].imageinfo[0];
+    if (!ii || !/^image\//.test(ii.mime || '')) { lastErr = `Commons POTD for ${date} is not an image`; continue; }
+    const meta = ii.extmetadata || {};
+    let caption = '';
+    try {
+      const q3 = await commonsApi({ action: 'query', prop: 'revisions', rvprop: 'content', rvslots: 'main', titles: `Template:Potd/${date} (en)` });
+      const content = q3.query.pages[0].revisions[0].slots.main.content;
+      const m = /\|\s*1\s*=\s*([\s\S]*?)(?=\|\s*\d+\s*=|\}\})/.exec(content);
+      if (m) caption = stripWiki(m[1]);
+    } catch (e) { /* caption optional */ }
+    const title = file.replace(/^File:/, '').replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ');
+    const artist = stripHtml(meta.Artist && meta.Artist.value);
+    const license = stripHtml(meta.LicenseShortName && meta.LicenseShortName.value);
+    return {
+      date, imageUrl: ii.thumburl || ii.url, title,
+      text: caption || stripHtml(meta.ImageDescription && meta.ImageDescription.value).slice(0, 600),
+      credit: [artist, license].filter(Boolean).join(' · '),
+      sourceUrl: ii.descriptionurl || `https://commons.wikimedia.org/wiki/${encodeURIComponent(file)}`, sourceName: 'Wikimedia Commons',
+    };
+  }
+  throw new Error(lastErr);
 }

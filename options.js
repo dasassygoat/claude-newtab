@@ -56,7 +56,8 @@ const GRADIENTS = {
   peach: 'linear-gradient(135deg, #fbe9dc 0%, #f6c9b4 50%, #e9a58a 100%)',
   mist: 'linear-gradient(160deg, #eef1f5 0%, #d8dee8 100%)',
 };
-const BG_DEFAULT = { type: 'default', color: '#1f1c2c', gradient: 'dusk', imageUrl: '', dim: 0.35, frost: true, tone: 'auto' };
+const BG_DEFAULT = { type: 'default', color: '#1f1c2c', gradient: 'dusk', imageUrl: '', dim: 0.35, frost: true, tone: 'auto', nasaKey: '', apodHd: true };
+const DAILY_TYPES = ['apod', 'commons'];
 let hasUploadedImage = false;
 
 function bgType() { const r = document.querySelector('input[name=bgType]:checked'); return r ? r.value : 'default'; }
@@ -64,6 +65,7 @@ function collectBg() {
   return {
     type: bgType(), color: $('bgColor').value, gradient: document.querySelector('.swatch.selected')?.dataset.name || 'dusk',
     imageUrl: $('bgImageUrl').value.trim(), dim: parseFloat($('bgDim').value), frost: $('bgFrost').checked, tone: $('bgTone').value,
+    nasaKey: $('nasaKey').value.trim(), apodHd: $('apodHd').checked,
   };
 }
 async function updateBgUI() {
@@ -71,12 +73,23 @@ async function updateBgUI() {
   $('bgColorRow').hidden = type !== 'color';
   $('bgGradientRow').hidden = type !== 'gradient';
   $('bgImageRow').hidden = type !== 'image';
+  $('bgApodRow').hidden = type !== 'apod';
+  $('bgCommonsRow').hidden = type !== 'commons';
+  $('bgDailyRow').hidden = !DAILY_TYPES.includes(type);
   $('bgExtras').hidden = type === 'default';
   $('bgDimVal').textContent = Math.round(parseFloat($('bgDim').value) * 100) + '%';
-  const pv = $('bgPreview'); const bg = collectBg();
+  $('bgDimDailyVal').textContent = $('bgDimVal').textContent;
+  const pv = $('bgPreview'); const bg = collectBg(); pv.querySelector('span').textContent = 'Preview';
   pv.style.backgroundImage = ''; pv.style.backgroundColor = ''; pv.style.setProperty('--pdim', '0');
   if (bg.type === 'color') pv.style.backgroundColor = bg.color;
   else if (bg.type === 'gradient') pv.style.backgroundImage = GRADIENTS[bg.gradient];
+  else if (DAILY_TYPES.includes(bg.type)) {
+    pv.style.setProperty('--pdim', String(bg.dim));
+    const r = await send('getDaily', { source: bg.type });
+    if (r.ok && r.daily && r.daily.imageUrl) { pv.style.backgroundImage = `url("${r.daily.imageUrl.replace(/"/g, '%22')}")`; pv.querySelector('span').textContent = r.daily.title; }
+    else pv.querySelector('span').textContent = `Could not load: ${r.error || (r.daily && r.daily.error) || 'unknown error'}`;
+    return;
+  }
   else if (bg.type === 'image') {
     let src = bg.imageUrl;
     if (!src) { try { src = (await chrome.storage.local.get('bgImage')).bgImage || ''; } catch (e) { src = ''; } }
@@ -87,7 +100,7 @@ function initBg(bg) {
   bg = Object.assign({}, BG_DEFAULT, bg || {});
   const radio = document.querySelector(`input[name=bgType][value="${bg.type}"]`) || document.querySelector('input[name=bgType][value=default]');
   radio.checked = true;
-  $('bgColor').value = bg.color; $('bgImageUrl').value = bg.imageUrl; $('bgDim').value = bg.dim; $('bgFrost').checked = bg.frost !== false; $('bgTone').value = bg.tone;
+  $('bgColor').value = bg.color; $('bgImageUrl').value = bg.imageUrl; $('bgDim').value = bg.dim; $('bgDimDaily').value = bg.dim; $('nasaKey').value = bg.nasaKey || ''; $('apodHd').checked = bg.apodHd !== false; $('bgFrost').checked = bg.frost !== false; $('bgTone').value = bg.tone;
   const sw = $('bgSwatches'); sw.innerHTML = '';
   for (const [name, css] of Object.entries(GRADIENTS)) {
     const d = document.createElement('div'); d.className = 'swatch' + (name === bg.gradient ? ' selected' : ''); d.dataset.name = name; d.style.backgroundImage = css; d.textContent = name; d.title = name;
@@ -98,7 +111,8 @@ function initBg(bg) {
   updateBgUI();
 }
 document.querySelectorAll('input[name=bgType]').forEach((r) => r.addEventListener('change', updateBgUI));
-['bgColor', 'bgImageUrl', 'bgDim', 'bgFrost', 'bgTone'].forEach((id) => $(id).addEventListener('input', updateBgUI));
+['bgColor', 'bgImageUrl', 'bgDim', 'bgFrost', 'bgTone', 'nasaKey', 'apodHd'].forEach((id) => $(id).addEventListener('input', updateBgUI));
+$('bgDimDaily').addEventListener('input', () => { $('bgDim').value = $('bgDimDaily').value; updateBgUI(); });
 
 $('bgFile').addEventListener('change', async () => {
   const file = $('bgFile').files[0]; if (!file) return;

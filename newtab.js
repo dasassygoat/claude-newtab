@@ -180,6 +180,7 @@ const LIGHT_GRADIENTS = ['peach', 'mist'];
 async function applyBackground() {
   const bg = Object.assign({ type: 'default', color: '#1f1c2c', gradient: 'dusk', imageUrl: '', dim: 0.35, frost: true, tone: 'auto' }, settings.bg || {});
   const body = document.body;
+  showDailyInfo(null);
   body.classList.remove('bg-custom', 'bg-frost');
   body.style.backgroundImage = ''; body.style.backgroundColor = '';
   body.removeAttribute('data-tone');
@@ -192,6 +193,15 @@ async function applyBackground() {
   } else if (bg.type === 'gradient') {
     body.style.backgroundImage = GRADIENTS[bg.gradient] || GRADIENTS.dusk;
     if (tone === 'auto') tone = LIGHT_GRADIENTS.includes(bg.gradient) ? 'light' : 'dark';
+  } else if (bg.type === 'apod' || bg.type === 'commons') {
+    const r = await send('getDaily', { source: bg.type });
+    const d = r.ok ? r.daily : null;
+    if (!d || !d.imageUrl) { showDailyInfo(null, r.error || (d && d.error)); return; }
+    body.style.backgroundImage = `url("${d.imageUrl.replace(/"/g, '%22')}")`;
+    body.style.backgroundColor = '#000';
+    body.style.setProperty('--dim', String(bg.dim));
+    if (tone === 'auto') tone = 'dark';
+    showDailyInfo(d);
   } else if (bg.type === 'image') {
     let src = bg.imageUrl;
     if (!src) { try { src = (await chrome.storage.local.get('bgImage')).bgImage || ''; } catch (e) { src = ''; } }
@@ -204,6 +214,19 @@ async function applyBackground() {
   body.classList.add('bg-custom');
   if (bg.frost) { body.classList.add('bg-frost'); body.style.setProperty('--card-alpha', bg.type === 'image' ? '72%' : '85%'); }
   body.setAttribute('data-tone', tone);
+}
+
+function showDailyInfo(d, err) {
+  const box = $('daily');
+  if (!d) { box.hidden = true; if (err) console.warn('picture of the day:', err); return; }
+  $('dailyKicker').textContent = `${d.sourceName || 'Picture of the day'} · ${d.date || ''}`;
+  $('dailyTitle').textContent = d.title || '';
+  $('dailyText').textContent = d.text || '';
+  $('dailyCredit').textContent = d.credit || '';
+  $('dailyLink').href = d.sourceUrl || '#';
+  $('dailySource').href = d.sourceUrl || '#';
+  $('dailySource').textContent = `Open on ${d.sourceName || 'source'} ↗`;
+  box.hidden = false;
 }
 
 // ---------- Boot ----------

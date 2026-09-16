@@ -113,3 +113,26 @@ body.bg-frost .card, body.bg-frost .askbox, body.bg-frost .chip, body.bg-frost .
 body.bg-frost .linklist a:hover, body.bg-frost .chip:hover, body.bg-frost .ev:hover { background: color-mix(in srgb, var(--soft) 85%, transparent); }
 body.bg-frost .clock, body.bg-frost .date, body.bg-frost .greeting, body.bg-frost .claudelinks, body.bg-frost .foot { text-shadow: 0 1px 12px rgba(0,0,0,.45); }
 body[data-tone="light"].bg-frost .clock, body[data-tone="light"].bg-frost .date, body[data-tone="light"].bg-frost .greeting, body[data-tone="light"].bg-frost .claudelinks, body[data-tone="light"].bg-frost .foot { text-shadow: 0 1px 12px rgba(255,255,255,.6); }
+
+/* ---- Picture-of-the-day info icon ---- */
+.daily { position: fixed; right: 18px; bottom: 18px; z-index: 5; }
+.daily-icon {
+  display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%;
+  background: color-mix(in srgb, var(--bg2) 75%, transparent); color: var(--fg); border: 1px solid var(--line);
+  font: 600 15px/1 Georgia, "Times New Roman", serif; font-style: italic; text-decoration: none;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--shadow); cursor: pointer;
+}
+.daily-icon:hover { border-color: var(--accent); text-decoration: none; }
+.daily-card {
+  position: absolute; right: 0; bottom: 44px; width: min(420px, calc(100vw - 40px)); max-height: 60vh; overflow: auto;
+  background: color-mix(in srgb, var(--bg2) 92%, transparent); color: var(--fg); border: 1px solid var(--line); border-radius: 14px;
+  padding: 14px 16px; box-shadow: var(--shadow); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  font-size: 13.5px; line-height: 1.5; opacity: 0; visibility: hidden; transform: translateY(6px);
+  transition: opacity .15s, transform .15s, visibility 0s linear .15s;
+}
+.daily:hover .daily-card, .daily:focus-within .daily-card { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.daily-kicker { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.daily-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+.daily-text { color: var(--fg); white-space: pre-line; }
+.daily-credit { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+.daily-source { display: inline-block; margin-top: 8px; color: var(--accent); font-weight: 600; }
