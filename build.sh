@@ -7,7 +7,8 @@ VERSION=$(python3 -c "import json;print(json.load(open('manifest.json'))['versio
 OUT="dist/claude-newtab-$VERSION.zip"
 STAGE=$(mktemp -d)
 trap 'rm -rf "$STAGE"' EXIT
-cp manifest.json background.js ics.js newtab.html newtab.css newtab.js options.html options.js icon.png "$STAGE/"
+SW=$(python3 -c "import json;print(json.load(open('manifest.json'))['background']['service_worker'])")
+cp manifest.json "$SW" ics.js newtab.html newtab.css newtab.js options.html options.js icon.png "$STAGE/"
 python3 - "$STAGE/manifest.json" <<'PY'
 import json, sys
 p = sys.argv[1]; m = json.load(open(p)); m.pop("key", None)

@@ -6,8 +6,9 @@ today's + upcoming calendar events, and quick links.
 ## How it's loaded
 `~/.config/microsoft-edge-stable-flags.conf` passes this folder in `--load-extension=...`
 (same mechanism Omarchy uses for its own extensions). Page files (html/css/js) are read from disk on every load.
-After editing background.js or manifest.json, bump `version` in manifest.json and restart Edge: Chromium caches the
-service worker script until the extension version changes.
+The service worker (`sw.js`) is different: Edge keeps the script it registered on first load, even across version bumps,
+for extensions loaded with `--load-extension`. After editing it, either click **Reload** on edge://extensions, or rename the
+file (and update `background.service_worker` in manifest.json) so the registration URL changes, then restart Edge.
 To use in Chromium/Chrome instead, add the same path to `~/.config/chromium-flags.conf`.
 
 Extension ID is pinned by the `key` in manifest.json (private key: `.extension-key.pem`, not needed at runtime):
@@ -38,7 +39,7 @@ DEMO_KEY is rate-limited, a free key can be entered in settings; HD by default) 
 2560px thumbnail). Both show an ⓘ icon bottom-right: hover for the explanation/caption and credit, click to open the source page.
 
 ## Files
-manifest.json · background.js (service worker: fetch/cache/OAuth) · ics.js (parser) ·
+manifest.json · sw.js (service worker: fetch/cache/OAuth) · ics.js (parser) ·
 newtab.html/css/js (page) · options.html/js (settings)
 
 ## Publishing to the Edge Add-ons store
