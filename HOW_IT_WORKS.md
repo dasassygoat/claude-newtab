@@ -52,7 +52,7 @@ flowchart LR
   REF --> Graph[(graph.microsoft.com)]
   REF --> ICS[(user's .ics URLs)]
   AUTH --> Login[(login.microsoftonline.com)]
-  DAILY --> NASA[(api.nasa.gov)] & Commons[(commons.wikimedia.org)]
+  DAILY --> NASA[(science.nasa.gov)] & Commons[(commons.wikimedia.org)]
   NT -- location.href --> Claude[(claude.ai/new?q=...)]
 ```
 
@@ -108,7 +108,7 @@ override a default.
   bg: {                             // background
     type: 'default'|'color'|'gradient'|'image'|'apod'|'commons'|'rotate',
     color, gradient, imageUrl, dim, frost, tone: 'auto'|'light'|'dark',
-    nasaKey, apodHd,
+    apodHd,
   },
 }
 ```
@@ -274,10 +274,12 @@ than nothing. Record shape:
 { source, date, imageUrl, title, text, credit, sourceUrl, sourceName, fetchedFor, fetchedAt }
 ```
 
-* **NASA APOD** — `GET https://api.nasa.gov/planetary/apod?api_key=…&date=YYYY-MM-DD`. Walks back up
-  to 7 days when the day's entry is missing or `media_type !== 'image'`. Uses `hdurl` unless
-  `apodHd` is false. `DEMO_KEY` is the default and is rate-limited per IP; users can paste their own
-  key. `sourceUrl` is the human page `apod.nasa.gov/apod/apYYMMDD.html`.
+* **NASA APOD** — `GET https://science.nasa.gov/feed/apod-basic/` (RSS, last ~30 days, CORS `*`, no
+  key). APOD moved to science.nasa.gov in 2026 and `api.nasa.gov/planetary/apod` now returns the
+  NASA logo for every date, so it is no longer used. Takes the newest item dated today or earlier
+  (date parsed from the `apod-YYYY-month-D-` slug) whose `apod:hdurl` is an image file. `hdurl` is
+  a resizer URL whose `w=` is the native width; the request is capped at 2560px (1920px when
+  `apodHd` is false) because the resizer upscales. `sourceUrl` is the item's `science.nasa.gov/image-article/…` page.
 * **Wikimedia Commons** — three MediaWiki API calls: `Template:Potd/<UTC date>` → file title;
   `imageinfo` with `iiurlwidth=2560` → `thumburl`, `descriptionurl`, `extmetadata` (artist,
   license, description); `Template:Potd/<date> (en)` wikitext → the caption (`stripWiki` removes
@@ -310,8 +312,9 @@ this text comes from third parties.
 `manifest.json`:
 
 * `permissions`: `storage`, `alarms`, `identity`.
-* `host_permissions`: Microsoft login + Graph, `api.nasa.gov`, `apod.nasa.gov`,
-  `commons.wikimedia.org`, `upload.wikimedia.org` — the hosts the worker fetches from.
+* `host_permissions`: Microsoft login + Graph,
+  `commons.wikimedia.org`, `upload.wikimedia.org` — the hosts the worker fetches from. The NASA
+  APOD feed needs no host permission because it serves `Access-Control-Allow-Origin: *`.
 * `optional_host_permissions`: `https://*/*`, `http://*/*` — **requested per-origin** when the user
   saves an iCal feed (`requestFeedPermissions` in options.js). `chrome.permissions.request` must run
   inside a user gesture, which is why it's in the Save click handler and not in the worker.

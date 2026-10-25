@@ -25,7 +25,10 @@ const DEFAULT_SETTINGS = {
   graph: { clientId: '', tenant: 'organizations', includeAllCalendars: true },   // set your own in Settings
 };
 
-chrome.runtime.onInstalled.addListener(() => { scheduleAlarm(); refresh().catch(() => {}); });
+chrome.runtime.onInstalled.addListener(async () => {
+  await chrome.storage.local.remove('daily_apod');   // drop any cached NASA-logo record from the old API
+  scheduleAlarm(); refresh().catch(() => {});
+});
 chrome.runtime.onStartup.addListener(() => { scheduleAlarm(); refresh().catch(() => {}); });
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'refresh') refresh().catch(() => {}); });
 chrome.action.onClicked.addListener(() => chrome.runtime.openOptionsPage());
@@ -303,24 +306,45 @@ async function getDaily(source, settings, force) {
   }
 }
 
+// APOD moved to science.nasa.gov in 2026; api.nasa.gov/planetary/apod still scrapes the old site and
+// now returns the NASA logo for every date. The site's own "APOD Basic" RSS feed (last ~30 days,
+// newest first) carries the same fields the API used to. Service workers have no DOMParser, so the
+// XML is picked apart with regexes.
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const decodeEntities = (s) => String(s || '')
+  .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
+
 async function fetchApod(settings) {
-  const apiKey = (settings.bg && settings.bg.nasaKey) || 'DEMO_KEY';
   const hd = !(settings.bg && settings.bg.apodHd === false);   // HD by default
-  let lastErr = 'no image found';
-  for (let back = 0; back < 7; back++) {
-    const d = new Date(); d.setDate(d.getDate() - back);
-    const date = localDateStr(d);
-    const res = await fetch(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(apiKey)}&date=${date}`, { cache: 'no-store' });
-    if (res.status === 429 || res.status === 403) throw new Error('NASA API rate limit reached (add your own free key in settings)');
-    if (res.status === 404 || res.status === 400) { lastErr = `no APOD for ${date}`; continue; }
-    if (!res.ok) throw new Error(`NASA API HTTP ${res.status}`);
-    const j = await res.json();
-    if (j.media_type !== 'image' || !j.url) { lastErr = `APOD for ${date} is a ${j.media_type}`; continue; }
-    const ymd = date.replace(/-/g, '').slice(2);
+  const res = await fetch('https://science.nasa.gov/feed/apod-basic/', { cache: 'no-store' });
+  if (!res.ok) throw new Error(`NASA APOD feed HTTP ${res.status}`);
+  const xml = await res.text();
+  const today = localDateStr(new Date());
+  const tag = (item, name) => {
+    const m = new RegExp(`<${name}>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${name}>`).exec(item);
+    return m ? m[1].trim() : '';
+  };
+  let lastErr = 'no image found in the APOD feed';
+  for (const [, item] of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const link = tag(item, 'apod:url') || tag(item, 'link');
+    // The slug carries the APOD date (apod-2026-october-24-...); pubDate is 00:05 US Eastern.
+    const sm = /apod-(\d{4})-([a-z]+)-(\d{1,2})-/.exec(link);
+    const date = sm && MONTHS.includes(sm[2]) ? `${sm[1]}-${pad2(MONTHS.indexOf(sm[2]) + 1)}-${pad2(sm[3])}` : localDateStr(new Date(tag(item, 'pubDate')));
+    if (date > today) continue;   // published for a timezone that is already tomorrow
+    let img;
+    try { img = new URL(decodeEntities(tag(item, 'apod:hdurl')).replace(/&amp;/g, '&')); } catch (e) { img = null; }
+    if (!img || !/\.(jpe?g|png|gif|webp)$/i.test(img.pathname)) { lastErr = `APOD for ${date} is not an image`; continue; }
+    // hdurl is a resizer URL whose w= is the native width; the resizer upscales, so cap rather than force.
+    const native = +img.searchParams.get('w') || 0;
+    const cap = hd ? 2560 : 1920;
+    img.search = native > 0 && native <= cap ? '' : `?w=${cap}`;
+    const credit = stripHtml(decodeEntities(tag(item, 'apod:credit') || tag(item, 'apod:copyright')));
+    const text = stripHtml(decodeEntities(tag(item, 'apod:explanation')))
+      .replace(/^Explanation:\s*/i, '').replace(/\s*Tomorrow's picture:[\s\S]*$/i, '');
     return {
-      date, imageUrl: hd && j.hdurl ? j.hdurl : j.url, title: j.title || 'Astronomy Picture of the Day',
-      text: j.explanation || '', credit: j.copyright ? `© ${String(j.copyright).trim()}` : 'NASA',
-      sourceUrl: `https://apod.nasa.gov/apod/ap${ymd}.html`, sourceName: 'NASA APOD',
+      date, imageUrl: img.href, title: stripHtml(decodeEntities(tag(item, 'title'))) || 'Astronomy Picture of the Day',
+      text, credit: credit || 'NASA', sourceUrl: link || 'https://science.nasa.gov/apod/', sourceName: 'NASA APOD',
     };
   }
   throw new Error(lastErr);
